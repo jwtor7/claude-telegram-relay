@@ -1,13 +1,6 @@
-```
-   _____ _                 _        ____       _
-  / ____| |               | |      |  _ \     | |
- | |    | | __ _ _   _  __| | ___  | |_) | ___| |_ __ _ _   _
- | |    | |/ _` | | | |/ _` |/ _ \ |  _ < / _ \ __/ _` | | | |
- | |____| | (_| | |_| | (_| |  __/ | |_) |  __/ || (_| | |_| |
-  \_____|_|\__,_|\__,_|\__,_|\___| |____/ \___|\__\__,_|\__, |
-                                                          __/ |
-                                                         |___/
-```
+<p align="center">
+  <img src="assets/banner.png" alt="Claude Relay" width="600">
+</p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun-f9f1e1?logo=bun)](https://bun.sh/)
