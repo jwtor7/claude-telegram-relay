@@ -157,7 +157,7 @@ async function callClaude(
     args.push("--resume", session.sessionId);
   }
 
-  args.push("--output-format", "text");
+  args.push("--output-format", "json");
 
   console.log(`Calling Claude: ${prompt.substring(0, 50)}...`);
 
@@ -167,7 +167,6 @@ async function callClaude(
       stderr: "pipe",
       env: {
         ...process.env,
-        // Pass through any env vars Claude might need
       },
     });
 
@@ -181,15 +180,21 @@ async function callClaude(
       return `Error: ${stderr || "Claude exited with code " + exitCode}`;
     }
 
-    // Extract session ID from output if present (for --resume)
-    const sessionMatch = output.match(/Session ID: ([a-f0-9-]+)/i);
-    if (sessionMatch) {
-      session.sessionId = sessionMatch[1];
-      session.lastActivity = new Date().toISOString();
-      await saveSession(session);
-    }
+    // Parse JSON output to extract response text and session ID
+    try {
+      const json = JSON.parse(output);
 
-    return output.trim();
+      if (json.session_id) {
+        session.sessionId = json.session_id;
+        session.lastActivity = new Date().toISOString();
+        await saveSession(session);
+      }
+
+      return (json.result || output).trim();
+    } catch {
+      // Fallback if JSON parsing fails
+      return output.trim();
+    }
   } catch (error) {
     console.error("Spawn error:", error);
     return `Error: Could not run Claude CLI`;

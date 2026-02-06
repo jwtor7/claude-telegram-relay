@@ -1,4 +1,21 @@
-# Claude Code Telegram Relay
+```
+   _____ _                 _        ____       _
+  / ____| |               | |      |  _ \     | |
+ | |    | | __ _ _   _  __| | ___  | |_) | ___| |_ __ _ _   _
+ | |    | |/ _` | | | |/ _` |/ _ \ |  _ < / _ \ __/ _` | | | |
+ | |____| | (_| | |_| | (_| |  __/ | |_) |  __/ || (_| | |_| |
+  \_____|_|\__,_|\__,_|\__,_|\___| |____/ \___|\__\__,_|\__, |
+                                                          __/ |
+                                                         |___/
+```
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun-f9f1e1?logo=bun)](https://bun.sh/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Bot: grammY](https://img.shields.io/badge/Bot_Framework-grammY-009dca)](https://grammy.dev/)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+
+---
 
 **A pattern for running Claude Code as an always-on Telegram bot.**
 
@@ -10,8 +27,8 @@ A minimal relay that connects Telegram to Claude Code CLI. You send a message on
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Telegram   │────▶│    Relay     │────▶│  Claude CLI  │
-│    (you)     │◀────│  (always on) │◀────│   (spawned)  │
+│   Telegram   │────>│    Relay     │────>│  Claude CLI  │
+│    (you)     │<────│  (always on) │<────│   (spawned)  │
 └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
@@ -35,8 +52,8 @@ The CLI spawn approach is the simplest way to get Claude Code's full power (tool
 ## Quick Start
 
 ```bash
-# Clone (or fork and customize)
-git clone https://github.com/YOUR_USERNAME/claude-telegram-relay
+# Clone
+git clone https://github.com/jwtor7/claude-telegram-relay
 cd claude-telegram-relay
 
 # Install dependencies
@@ -56,7 +73,7 @@ The relay needs to run continuously. Here's how on each platform:
 
 ### macOS (LaunchAgent)
 
-LaunchAgent keeps the bot running and restarts it if it crashes.
+LaunchAgent keeps the bot running and restarts it if it crashes. Use a wrapper script to pull secrets from keychain at launch time (no tokens in plist files).
 
 ```bash
 # Copy the template
@@ -174,9 +191,10 @@ bot.on("message:text", async (ctx) => {
 });
 
 async function spawnClaude(prompt: string): Promise<string> {
-  const proc = spawn(["claude", "-p", prompt, "--output-format", "text"]);
+  const proc = spawn(["claude", "-p", prompt, "--output-format", "json"]);
   const output = await new Response(proc.stdout).text();
-  return output;
+  const json = JSON.parse(output);
+  return json.result;
 }
 ```
 
@@ -198,8 +216,10 @@ if (ctx.from?.id.toString() !== process.env.TELEGRAM_USER_ID) {
 const proc = spawn([
   "claude", "-p", prompt,
   "--resume", sessionId,  // Continue previous conversation
-  "--output-format", "text"
+  "--output-format", "json"
 ]);
+const json = JSON.parse(await new Response(proc.stdout).text());
+sessionId = json.session_id; // Persist for next message
 ```
 
 ### Voice Messages
@@ -310,8 +330,8 @@ They work. Claude CLI uses your `~/.claude/settings.json` config, so all your MC
 
 ## Credits
 
-Built by [Goda](https://www.youtube.com/@godago) as part of the Personal AI Infrastructure project.
+Originally created by [Goda](https://www.youtube.com/@godago) ([godagoo/claude-telegram-relay](https://github.com/godagoo/claude-telegram-relay)). Forked and extended with session continuity fixes and LaunchAgent operationalization.
 
 ## License
 
-MIT - Take it, customize it, make it yours.
+[MIT](LICENSE) - Take it, customize it, make it yours.
