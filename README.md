@@ -328,6 +328,12 @@ They work. Claude CLI uses your `~/.claude/settings.json` config, so all your MC
 3. **Limit permissions** - Consider `--permission-mode` flag
 4. **Review commands** - Claude can execute bash, be aware of what you're allowing
 
+## Recent Changes
+
+**Latest (2026-02-05 22:02)**: Fixed session continuity (`--resume` now works), added LaunchAgent wrapper script pattern, personalized README with badges and upstream credit.
+
+*For complete history, see [CHANGELOG.md](./CHANGELOG.md)*
+
 ## Credits
 
 Originally created by [Goda](https://www.youtube.com/@godago) ([godagoo/claude-telegram-relay](https://github.com/godagoo/claude-telegram-relay)). Forked and extended with session continuity fixes and LaunchAgent operationalization.
