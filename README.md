@@ -323,7 +323,9 @@ They work. Claude CLI uses your `~/.claude/settings.json` config, so all your MC
 
 ## Recent Changes
 
-**Latest (2026-02-05 22:02)**: Fixed session continuity (`--resume` now works), added LaunchAgent wrapper script pattern, personalized README with badges and upstream credit.
+**Latest (2026-02-05 22:56)**: Added 10 Telegram bot commands (`/status`, `/context`, model switching, `/reset`, `/system`, `/budget`), config persistence, and usage stats capture.
+
+**2026-02-05 22:02**: Fixed session continuity (`--resume` now works), added LaunchAgent wrapper script pattern, personalized README with badges and upstream credit.
 
 *For complete history, see [CHANGELOG.md](./CHANGELOG.md)*
 

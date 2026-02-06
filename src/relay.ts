@@ -33,6 +33,26 @@ interface SessionState {
   lastActivity: string;
 }
 
+interface RelayConfig {
+  model: string;
+  systemPrompt: string | null;
+  maxBudget: number | null;
+}
+
+interface UsageStats {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  totalCostUsd: number;
+  numTurns: number;
+  contextWindow: number;
+  maxOutputTokens: number;
+}
+
+const CONFIG_FILE = join(RELAY_DIR, "config.json");
+const START_TIME = Date.now();
+
 // ============================================================
 // SESSION MANAGEMENT
 // ============================================================
@@ -51,6 +71,32 @@ async function saveSession(state: SessionState): Promise<void> {
 }
 
 let session = await loadSession();
+
+// ============================================================
+// CONFIG MANAGEMENT
+// ============================================================
+
+const DEFAULT_CONFIG: RelayConfig = {
+  model: "sonnet",
+  systemPrompt: null,
+  maxBudget: null,
+};
+
+async function loadConfig(): Promise<RelayConfig> {
+  try {
+    const content = await readFile(CONFIG_FILE, "utf-8");
+    return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
+  } catch {
+    return { ...DEFAULT_CONFIG };
+  }
+}
+
+async function saveConfig(cfg: RelayConfig): Promise<void> {
+  await writeFile(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+}
+
+let config = await loadConfig();
+let lastUsage: UsageStats | null = null;
 
 // ============================================================
 // LOCK FILE (prevent multiple instances)
@@ -143,6 +189,173 @@ bot.use(async (ctx, next) => {
 });
 
 // ============================================================
+// BOT COMMANDS
+// ============================================================
+
+bot.command("ping", async (ctx) => {
+  await ctx.reply("Pong.");
+});
+
+bot.command("status", async (ctx) => {
+  const uptimeMs = Date.now() - START_TIME;
+  const uptimeH = Math.floor(uptimeMs / 3_600_000);
+  const uptimeM = Math.floor((uptimeMs % 3_600_000) / 60_000);
+  const uptime = uptimeH > 0 ? `${uptimeH}h ${uptimeM}m` : `${uptimeM}m`;
+
+  const sessionDisplay = session.sessionId
+    ? session.sessionId.substring(0, 12) + "..."
+    : "none";
+
+  const lines = [
+    "Status",
+    "",
+    `Model: ${config.model}`,
+    `Session: ${sessionDisplay}`,
+    `Uptime: ${uptime}`,
+    `Last activity: ${session.lastActivity}`,
+  ];
+
+  if (config.systemPrompt) {
+    const display =
+      config.systemPrompt.length > 80
+        ? config.systemPrompt.substring(0, 80) + "..."
+        : config.systemPrompt;
+    lines.push(`System prompt: ${display}`);
+  }
+
+  if (config.maxBudget !== null) {
+    lines.push(`Budget cap: $${config.maxBudget.toFixed(2)}`);
+  }
+
+  await ctx.reply(lines.join("\n"));
+});
+
+bot.command("context", async (ctx) => {
+  if (!lastUsage) {
+    await ctx.reply("No context yet — send a message first.");
+    return;
+  }
+
+  const u = lastUsage;
+  const totalInput = u.inputTokens + u.cacheReadTokens + u.cacheCreationTokens;
+  const fillPct =
+    u.contextWindow > 0
+      ? ((totalInput / u.contextWindow) * 100).toFixed(1)
+      : "?";
+
+  const fmt = (n: number) => n.toLocaleString("en-US");
+
+  const lines = [
+    "Context (last response)",
+    "",
+    `Model: ${config.model}`,
+    `Tokens: ${fmt(u.inputTokens)} in / ${fmt(u.outputTokens)} out`,
+    `Cache: ${fmt(u.cacheReadTokens)} read / ${fmt(u.cacheCreationTokens)} created`,
+    `Context window: ${fmt(totalInput)} / ${fmt(u.contextWindow)} (${fillPct}%)`,
+    `Cost: $${u.totalCostUsd.toFixed(4)}`,
+    `Turns: ${u.numTurns}`,
+  ];
+
+  await ctx.reply(lines.join("\n"));
+});
+
+bot.command("sonnet", async (ctx) => {
+  config.model = "sonnet";
+  await saveConfig(config);
+  await ctx.reply("Switched to Sonnet.");
+});
+
+bot.command("opus", async (ctx) => {
+  config.model = "opus";
+  await saveConfig(config);
+  await ctx.reply("Switched to Opus.");
+});
+
+bot.command("haiku", async (ctx) => {
+  config.model = "haiku";
+  await saveConfig(config);
+  await ctx.reply("Switched to Haiku.");
+});
+
+bot.command("reset", async (ctx) => {
+  session.sessionId = null;
+  await saveSession(session);
+  await ctx.reply("Session cleared.");
+});
+
+bot.command("system", async (ctx) => {
+  const text = ctx.match as string;
+
+  if (!text) {
+    if (config.systemPrompt) {
+      await ctx.reply(`Current system prompt:\n\n${config.systemPrompt}`);
+    } else {
+      await ctx.reply("No system prompt set. Usage: /system <text> or /system clear");
+    }
+    return;
+  }
+
+  if (text === "clear") {
+    config.systemPrompt = null;
+    await saveConfig(config);
+    await ctx.reply("System prompt cleared.");
+    return;
+  }
+
+  config.systemPrompt = text;
+  await saveConfig(config);
+  await ctx.reply(`System prompt set:\n\n${text}`);
+});
+
+bot.command("budget", async (ctx) => {
+  const text = ctx.match as string;
+
+  if (!text) {
+    if (config.maxBudget !== null) {
+      await ctx.reply(`Current budget cap: $${config.maxBudget.toFixed(2)}`);
+    } else {
+      await ctx.reply("No budget cap set. Usage: /budget <amount> or /budget clear");
+    }
+    return;
+  }
+
+  if (text === "clear") {
+    config.maxBudget = null;
+    await saveConfig(config);
+    await ctx.reply("Budget cap removed.");
+    return;
+  }
+
+  const amount = parseFloat(text);
+  if (isNaN(amount) || amount <= 0) {
+    await ctx.reply("Invalid amount. Use a positive number, e.g. /budget 0.50");
+    return;
+  }
+
+  config.maxBudget = amount;
+  await saveConfig(config);
+  await ctx.reply(`Budget cap set: $${amount.toFixed(2)} per call.`);
+});
+
+bot.command("help", async (ctx) => {
+  const lines = [
+    "Commands",
+    "",
+    "/ping — Alive check",
+    "/status — Model, session, uptime",
+    "/context — Token usage & context window",
+    "/sonnet — Switch to Sonnet",
+    "/opus — Switch to Opus",
+    "/haiku — Switch to Haiku",
+    "/reset — Start fresh conversation",
+    "/system [text] — Set/show/clear system prompt",
+    "/budget [amount] — Set/show/clear cost cap",
+    "/help — This message",
+  ];
+  await ctx.reply(lines.join("\n"));
+});
+
+// ============================================================
 // CORE: Call Claude CLI
 // ============================================================
 
@@ -159,7 +372,18 @@ async function callClaude(
 
   args.push("--output-format", "json");
 
-  console.log(`Calling Claude: ${prompt.substring(0, 50)}...`);
+  // Config-driven flags
+  args.push("--model", config.model);
+
+  if (config.systemPrompt) {
+    args.push("--append-system-prompt", config.systemPrompt);
+  }
+
+  if (config.maxBudget !== null) {
+    args.push("--max-budget-usd", config.maxBudget.toString());
+  }
+
+  console.log(`Calling Claude (${config.model}): ${prompt.substring(0, 50)}...`);
 
   try {
     const proc = spawn(args, {
@@ -188,6 +412,23 @@ async function callClaude(
         session.sessionId = json.session_id;
         session.lastActivity = new Date().toISOString();
         await saveSession(session);
+      }
+
+      // Capture usage stats
+      if (json.usage) {
+        const modelKeys = json.modelUsage ? Object.keys(json.modelUsage) : [];
+        const modelInfo = modelKeys.length > 0 ? json.modelUsage[modelKeys[0]] : {};
+
+        lastUsage = {
+          inputTokens: json.usage.input_tokens || 0,
+          outputTokens: json.usage.output_tokens || 0,
+          cacheReadTokens: json.usage.cache_read_input_tokens || 0,
+          cacheCreationTokens: json.usage.cache_creation_input_tokens || 0,
+          totalCostUsd: json.total_cost_usd || 0,
+          numTurns: json.num_turns || 0,
+          contextWindow: modelInfo.contextWindow || 0,
+          maxOutputTokens: modelInfo.maxOutputTokens || 0,
+        };
       }
 
       return (json.result || output).trim();
@@ -378,6 +619,24 @@ async function sendResponse(ctx: Context, response: string): Promise<void> {
 
 console.log("Starting Claude Telegram Relay...");
 console.log(`Authorized user: ${ALLOWED_USER_ID || "ANY (not recommended)"}`);
+console.log(`Model: ${config.model}`);
+
+try {
+  await bot.api.setMyCommands([
+    { command: "status", description: "Model, session, uptime" },
+    { command: "context", description: "Token usage & context window" },
+    { command: "sonnet", description: "Switch to Sonnet" },
+    { command: "opus", description: "Switch to Opus" },
+    { command: "haiku", description: "Switch to Haiku" },
+    { command: "reset", description: "Start fresh conversation" },
+    { command: "system", description: "Set system prompt" },
+    { command: "budget", description: "Set cost cap per call" },
+    { command: "ping", description: "Alive check" },
+    { command: "help", description: "List commands" },
+  ]);
+} catch (err) {
+  console.error("Failed to set bot commands menu:", err);
+}
 
 bot.start({
   onStart: () => {
