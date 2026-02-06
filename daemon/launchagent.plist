@@ -9,27 +9,13 @@
     <!-- Command to run -->
     <key>ProgramArguments</key>
     <array>
-        <!-- UPDATE THIS: Path to bun -->
-        <string>/Users/YOUR_USERNAME/.bun/bin/bun</string>
-        <string>run</string>
-        <string>src/relay.ts</string>
+        <string>/bin/bash</string>
+        <string>/Users/YOUR_USERNAME/.claude-relay/start.sh</string>
     </array>
 
     <!-- Working directory -->
     <key>WorkingDirectory</key>
-    <!-- UPDATE THIS: Path to your relay directory -->
-    <string>/Users/YOUR_USERNAME/claude-telegram-relay</string>
-
-    <!-- Environment variables -->
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <!-- UPDATE THIS: Include paths to bun, node, claude -->
-        <string>/Users/YOUR_USERNAME/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
-        <key>HOME</key>
-        <!-- UPDATE THIS -->
-        <string>/Users/YOUR_USERNAME</string>
-    </dict>
+    <string>/Users/YOUR_USERNAME/dev/claude-telegram-relay</string>
 
     <!-- Start when loaded -->
     <key>RunAtLoad</key>
@@ -41,11 +27,9 @@
 
     <!-- Log files -->
     <key>StandardOutPath</key>
-    <!-- UPDATE THIS -->
     <string>/Users/YOUR_USERNAME/Library/Logs/claude-telegram-relay.log</string>
 
     <key>StandardErrorPath</key>
-    <!-- UPDATE THIS -->
     <string>/Users/YOUR_USERNAME/Library/Logs/claude-telegram-relay.error.log</string>
 
     <!-- Wait 10 seconds before restarting after crash -->
@@ -57,26 +41,22 @@
 <!--
 SETUP INSTRUCTIONS:
 
-1. Replace all YOUR_USERNAME with your actual macOS username
-
-2. Copy to LaunchAgents:
+1. Copy to LaunchAgents:
    cp daemon/launchagent.plist ~/Library/LaunchAgents/com.claude.telegram-relay.plist
 
-3. Make sure your .env file exists in the relay directory
-
-4. Load the agent:
+2. Load the agent:
    launchctl load ~/Library/LaunchAgents/com.claude.telegram-relay.plist
 
-5. Check if running:
+3. Check if running:
    launchctl list | grep claude
 
-6. View logs:
+4. View logs:
    tail -f ~/Library/Logs/claude-telegram-relay.log
 
-7. To stop:
+5. To stop:
    launchctl unload ~/Library/LaunchAgents/com.claude.telegram-relay.plist
 
-8. To restart:
+6. To restart:
    launchctl unload ~/Library/LaunchAgents/com.claude.telegram-relay.plist
    launchctl load ~/Library/LaunchAgents/com.claude.telegram-relay.plist
 -->
