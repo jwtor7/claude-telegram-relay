@@ -14,6 +14,20 @@
 
 > **This is a reference implementation, not a copy-paste solution.** Take the patterns here and build your own system tailored to your needs.
 
+## Feature Requests
+
+Ideas on the radar — contributions and feedback welcome.
+
+- **Apple Containers instead of bare metal** — Run each relay instance (or each Claude CLI spawn) inside an [Apple Container](https://github.com/apple/container) rather than directly on the host. Apple's Containerization framework (macOS 26+, Apple Silicon) spins up lightweight Linux VMs per container with near-instant boot. Benefits: process isolation so Claude CLI can't touch your host filesystem, reproducible environment, security boundary between bot and personal data. Would replace or complement the current LaunchAgent daemon pattern.
+
+- **Voice message transcription** — Wire up the existing voice handler stub in `relay.ts` to a real transcription backend (Whisper, Gemini, etc.) so voice notes become first-class input.
+
+- **Streaming responses** — Instead of waiting for the full Claude CLI output, stream chunks back to Telegram progressively (edit-in-place via `editMessageText`). Reduces perceived latency on long responses.
+
+- **Agent SDK migration path** — Provide an alternative relay implementation using the Claude Agent SDK instead of CLI spawn, for users who want lower latency, native streaming, and programmatic tool control.
+
+- **Inline keyboard controls** — Replace text-based `/sonnet`, `/opus`, `/haiku` commands with Telegram inline keyboards for model switching, budget setting, and session management.
+
 ## What This Is
 
 A minimal relay that connects Telegram to Claude Code CLI. You send a message on Telegram, the relay spawns `claude -p`, and sends the response back. That's it.

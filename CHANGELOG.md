@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-06
+
+#### 19:24
+
+### Added
+- Feature Requests section to README with 5 planned features: Apple Containers, voice transcription, streaming responses, Agent SDK migration path, and inline keyboard controls
+
+---
+
 ## 2026-02-05
 
 #### 22:56
